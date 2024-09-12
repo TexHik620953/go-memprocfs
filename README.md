@@ -1,3 +1,6 @@
+### Golang bindings for https://github.com/ufrisk/MemProcFS
+
+
 ## Example initialization
 ```go
 func main() {
@@ -7,11 +10,11 @@ func main() {
 	}
 	defer mfs.Close()
 
-	pid, err = mfs.GetPidByName("RustClient.exe")
+	pid, err = mfs.GetPidByName("MyApplication.exe")
 	if err != nil {
 		log.Fatalf("failed to find pid %s", err.Error())
 	}
-	base, err = mfs.GetModuleBase(pid, "GameAssembly.dll")
+	base, err = mfs.GetModuleBase(pid, "MyApplocation.dll")
 	if err != nil {
 		log.Fatalf("failed to get module base %s", err.Error())
 	}
@@ -32,7 +35,7 @@ value, err := mfs.ReadInt64(pid, []uintptr{base + 0x123, 0x321, 0xAAAA, 0xBBBB, 
 
 // Chain uint read
 value, err := mfs.ReadUInt32(pid, []uintptr{base + 0x123, 0x321, 0xAAAA, 0xBBBB, ...})
-value, err := mfs.ReadUInt32(pid, []uintptr{base + 0x123, 0x321, 0xAAAA, 0xBBBB, ...})
+value, err := mfs.ReadUInt64(pid, []uintptr{base + 0x123, 0x321, 0xAAAA, 0xBBBB, ...})
 
 
 // Chain read floats
