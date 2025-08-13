@@ -36,3 +36,34 @@ func (h *MemProcFS) GetModuleBase(pid int32, moduleName string) (uintptr, error)
 	}
 	return uintptr(base), nil
 }
+
+type VmmDllModuleEntry struct {
+	VaBase      uintptr
+	VaEntry     uintptr
+	CbImageSize uint32
+	FWoW64      bool
+}
+
+func (h *MemProcFS) GetModuleInfo(pid int32, moduleName string) (*VmmDllModuleEntry, error) {
+	cmoduleName := C.CString(moduleName)
+	defer C.free(unsafe.Pointer(cmoduleName))
+
+	modInfo := C.PVMMDLL_MAP_MODULE{}
+
+	base := C.VMMDLL_Map_GetModuleFromNameU(
+		h.vmDllHandle,
+		C.DWORD(pid),
+		cmoduleName,
+		&modInfo,
+		0,
+	)
+	if base == 0 {
+		return nil, fmt.Errorf("failed to get module base: %s", moduleName)
+	}
+	return &VmmDllModuleEntry{
+		VaBase:      modInfo.vaBase,
+		VaEntry:     modInfo.vaEntry,
+		CbImageSize: modInfo.cbImageSize,
+		FWoW64:      modInfo.fWoW64,
+	}, nil
+}
