@@ -48,22 +48,23 @@ func (h *MemProcFS) GetModuleInfo(pid int32, moduleName string) (*VmmDllModuleEn
 	cmoduleName := C.CString(moduleName)
 	defer C.free(unsafe.Pointer(cmoduleName))
 
-	modInfo := C.PVMMDLL_MAP_MODULE{}
+	var pModuleEntry *C.VMMDLL_MAP_MODULEENTRY
+	ppModuleEntry := (*C.PVMMDLL_MAP_MODULEENTRY)(unsafe.Pointer(&pModuleEntry))
 
 	base := C.VMMDLL_Map_GetModuleFromNameU(
 		h.vmDllHandle,
 		C.DWORD(pid),
 		cmoduleName,
-		&modInfo,
+		ppModuleEntry,
 		0,
 	)
 	if base == 0 {
 		return nil, fmt.Errorf("failed to get module base: %s", moduleName)
 	}
 	return &VmmDllModuleEntry{
-		VaBase:      modInfo.vaBase,
-		VaEntry:     modInfo.vaEntry,
-		CbImageSize: modInfo.cbImageSize,
-		FWoW64:      modInfo.fWoW64,
+		VaBase:      uintptr(pModuleEntry.vaBase),
+		VaEntry:     uintptr(pModuleEntry.vaEntry),
+		CbImageSize: uint32(pModuleEntry.cbImageSize),
+		FWoW64:      pModuleEntry.fWoW64 == 1,
 	}, nil
 }
