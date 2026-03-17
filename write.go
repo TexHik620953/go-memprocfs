@@ -28,3 +28,11 @@ func (h *MemProcFS) WriteInt32(pid int32, addr uintptr, value int32) error {
 
 	return h.MemWrite(pid, addr, buf[:])
 }
+
+
+func (h *MemProcFS) WriteUInt64(pid int32, addr uintptr, value int64) error {
+	var buf [8]byte
+	binary.LittleEndian.PutUint64(buf[:], uint64(value))
+
+	return h.MemWrite(pid, addr, buf[:])
+}
