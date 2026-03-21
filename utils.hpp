@@ -30,6 +30,7 @@ static inline DWORD VadEntry_GetfHeap(PVMMDLL_MAP_VADENTRY e) { return e->fHeap;
 static inline DWORD VadEntry_GetHeapNum(PVMMDLL_MAP_VADENTRY e) { return e->HeapNum; }
 static inline DWORD VadEntry_GetCommitCharge(PVMMDLL_MAP_VADENTRY e) { return e->CommitCharge; }
 static inline DWORD VadEntry_GetMemCommit(PVMMDLL_MAP_VADENTRY e) { return e->MemCommit; }
+static inline LPSTR VadEntry_GetText(PVMMDLL_MAP_VADENTRY e) { return e->uszText; }
 
 #ifdef __cplusplus
 }

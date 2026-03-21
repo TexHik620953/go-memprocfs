@@ -80,8 +80,9 @@ func (h *MemProcFS) GetVadMap(pid int32, identifyModules bool) ([]VadEntry, erro
 			VaFileObject: uintptr(e.vaFileObject),
 			CVadExPages:  uint32(e.cVadExPages),
 		}
-		if e.uszText != nil {
-			entry.Text = C.GoString(e.uszText)
+		txt := C.VadEntry_GetText(e)
+		if txt != nil {
+			entry.Text = C.GoString(txt)
 		}
 		result[i] = entry
 	}
