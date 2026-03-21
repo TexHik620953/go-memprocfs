@@ -32,6 +32,26 @@ static inline DWORD VadEntry_GetCommitCharge(PVMMDLL_MAP_VADENTRY e) { return e-
 static inline DWORD VadEntry_GetMemCommit(PVMMDLL_MAP_VADENTRY e) { return e->MemCommit; }
 static inline LPSTR VadEntry_GetText(PVMMDLL_MAP_VADENTRY e) { return e->uszText; }
 
+// Heap map helpers
+static inline DWORD HeapMap_GetCount(PVMMDLL_MAP_HEAP pHeapMap) {
+    return pHeapMap->cMap;
+}
+
+static inline PVMMDLL_MAP_HEAPENTRY HeapMap_GetEntry(PVMMDLL_MAP_HEAP pHeapMap, DWORD i) {
+    return &pHeapMap->pMap[i];
+}
+
+static inline DWORD HeapMap_GetSegmentCount(PVMMDLL_MAP_HEAP pHeapMap) {
+    return pHeapMap->cSegments;
+}
+
+static inline PVMMDLL_MAP_HEAP_SEGMENTENTRY HeapMap_GetSegment(PVMMDLL_MAP_HEAP pHeapMap, DWORD i) {
+    return &pHeapMap->pSegments[i];
+}
+
+static inline DWORD HeapSegment_GetTp(PVMMDLL_MAP_HEAP_SEGMENTENTRY e) { return (DWORD)e->tp; }
+static inline DWORD HeapSegment_GetIHeap(PVMMDLL_MAP_HEAP_SEGMENTENTRY e) { return e->iHeap; }
+
 #ifdef __cplusplus
 }
 #endif

@@ -89,6 +89,87 @@ func (h *MemProcFS) GetVadMap(pid int32, identifyModules bool) ([]VadEntry, erro
 	return result, nil
 }
 
+type HeapType uint32
+
+const (
+	HeapTypeNA  HeapType = 0 // Unknown
+	HeapTypeNT  HeapType = 1 // NT Heap
+	HeapTypeSeg HeapType = 2 // Segment Heap
+)
+
+type HeapSegmentType uint32
+
+const (
+	HeapSegmentNA         HeapSegmentType = 0
+	HeapSegmentNTSegment  HeapSegmentType = 1
+	HeapSegmentNTLFH      HeapSegmentType = 2
+	HeapSegmentNTLarge    HeapSegmentType = 3
+	HeapSegmentNTNA       HeapSegmentType = 4
+	HeapSegmentSegHeap    HeapSegmentType = 5
+	HeapSegmentSegSegment HeapSegmentType = 6
+	HeapSegmentSegLarge   HeapSegmentType = 7
+	HeapSegmentSegNA      HeapSegmentType = 8
+)
+
+type HeapEntry struct {
+	Va        uintptr
+	Type      HeapType
+	Is32      bool
+	IHeap     uint32
+	HeapNum   uint32
+}
+
+type HeapSegmentEntry struct {
+	Va    uintptr
+	Size  uint32
+	Type  HeapSegmentType
+	IHeap uint32
+}
+
+type HeapMap struct {
+	Heaps    []HeapEntry
+	Segments []HeapSegmentEntry
+}
+
+func (h *MemProcFS) GetHeapMap(pid int32) (*HeapMap, error) {
+	var pHeapMap C.PVMMDLL_MAP_HEAP
+	ok := C.VMMDLL_Map_GetHeap(h.vmDllHandle, C.DWORD(pid), &pHeapMap)
+	if ok == 0 {
+		return nil, fmt.Errorf("failed to get heap map for pid: %d", pid)
+	}
+	defer C.VMMDLL_MemFree(C.PVOID(unsafe.Pointer(pHeapMap)))
+
+	heapCount := int(C.HeapMap_GetCount(pHeapMap))
+	heaps := make([]HeapEntry, heapCount)
+	for i := 0; i < heapCount; i++ {
+		e := C.HeapMap_GetEntry(pHeapMap, C.DWORD(i))
+		heaps[i] = HeapEntry{
+			Va:      uintptr(e.va),
+			Type:    HeapType(e.tp),
+			Is32:    e.f32 != 0,
+			IHeap:   uint32(e.iHeap),
+			HeapNum: uint32(e.dwHeapNum),
+		}
+	}
+
+	segCount := int(C.HeapMap_GetSegmentCount(pHeapMap))
+	segments := make([]HeapSegmentEntry, segCount)
+	for i := 0; i < segCount; i++ {
+		s := C.HeapMap_GetSegment(pHeapMap, C.DWORD(i))
+		segments[i] = HeapSegmentEntry{
+			Va:    uintptr(s.va),
+			Size:  uint32(s.cb),
+			Type:  HeapSegmentType(C.HeapSegment_GetTp(s)),
+			IHeap: uint32(C.HeapSegment_GetIHeap(s)),
+		}
+	}
+
+	return &HeapMap{
+		Heaps:    heaps,
+		Segments: segments,
+	}, nil
+}
+
 func (h *MemProcFS) GetModuleBase(pid int32, moduleName string) (uintptr, error) {
 	cmoduleName := C.CString(moduleName)
 	defer C.free(unsafe.Pointer(cmoduleName))
