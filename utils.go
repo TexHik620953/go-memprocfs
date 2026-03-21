@@ -26,26 +26,48 @@ func (h *MemProcFS) FixCr3(pid int32, processName string) error {
 }
 
 type VadEntry struct {
-	VaStart       uintptr
-	VaEnd         uintptr
-	VadType       uint32
-	Protection    uint32
-	IsImage       bool
-	IsFile        bool
-	IsPageFile    bool
-	IsPrivate     bool
-	IsTeb         bool
-	IsStack       bool
-	IsHeap        bool
-	HeapNum       uint32
-	CommitCharge  uint32
-	MemCommit     bool
-	Text          string
-	VaFileObject  uintptr
-	CVadExPages   uint32
+	VaStart      uintptr
+	VaEnd        uintptr
+	VadType      uint32
+	Protection   uint32
+	IsImage      bool
+	IsFile       bool
+	IsPageFile   bool
+	IsPrivate    bool
+	IsTeb        bool
+	IsStack      bool
+	IsHeap       bool
+	HeapNum      uint32
+	CommitCharge uint32
+	MemCommit    bool
+	Text         string
+	VaFileObject uintptr
+	CVadExPages  uint32
 }
 
-func (h *MemProcFS) GetVadMap(pid int32, identifyModules bool) ([]VadEntry, error) {
+type VadList struct {
+	Entries []VadEntry
+}
+
+func (vl *VadList) FindEntry(addr uintptr) (VadEntry, bool) {
+	for _, e := range vl.Entries {
+		if addr >= e.VaStart && addr < e.VaEnd {
+			return e, true
+		}
+	}
+	return VadEntry{}, false
+}
+func (vl *VadList) Find(comp func(ve VadEntry) bool) []VadEntry {
+	r := make([]VadEntry, 0)
+	for _, e := range vl.Entries {
+		if comp(e) {
+			r = append(r, e)
+		}
+	}
+	return r
+}
+
+func (h *MemProcFS) GetVadMap(pid int32, identifyModules bool) (*VadList, error) {
 	fIdentify := C.BOOL(0)
 	if identifyModules {
 		fIdentify = C.BOOL(1)
@@ -86,7 +108,9 @@ func (h *MemProcFS) GetVadMap(pid int32, identifyModules bool) ([]VadEntry, erro
 		}
 		result[i] = entry
 	}
-	return result, nil
+	return &VadList{
+		Entries: result,
+	}, nil
 }
 
 type HeapType uint32
@@ -112,11 +136,11 @@ const (
 )
 
 type HeapEntry struct {
-	Va        uintptr
-	Type      HeapType
-	Is32      bool
-	IHeap     uint32
-	HeapNum   uint32
+	Va      uintptr
+	Type    HeapType
+	Is32    bool
+	IHeap   uint32
+	HeapNum uint32
 }
 
 type HeapSegmentEntry struct {
