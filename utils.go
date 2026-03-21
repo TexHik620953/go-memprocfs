@@ -1,5 +1,8 @@
 package memprocfs
 
+// #include <stdlib.h>
+// #include "leechcore.h"
+// #include "vmmdll.h"
 // #include "utils.hpp"
 import "C"
 import (
@@ -20,6 +23,69 @@ func (h *MemProcFS) FixCr3(pid int32, processName string) error {
 		return fmt.Errorf("failed to fix cr3")
 	}
 	return nil
+}
+
+type VadEntry struct {
+	VaStart       uintptr
+	VaEnd         uintptr
+	VadType       uint32
+	Protection    uint32
+	IsImage       bool
+	IsFile        bool
+	IsPageFile    bool
+	IsPrivate     bool
+	IsTeb         bool
+	IsStack       bool
+	IsHeap        bool
+	HeapNum       uint32
+	CommitCharge  uint32
+	MemCommit     bool
+	Text          string
+	VaFileObject  uintptr
+	CVadExPages   uint32
+}
+
+func (h *MemProcFS) GetVadMap(pid int32, identifyModules bool) ([]VadEntry, error) {
+	fIdentify := C.BOOL(0)
+	if identifyModules {
+		fIdentify = C.BOOL(1)
+	}
+
+	var pVadMap C.PVMMDLL_MAP_VAD
+	ok := C.VMMDLL_Map_GetVadU(h.vmDllHandle, C.DWORD(pid), fIdentify, &pVadMap)
+	if ok == 0 {
+		return nil, fmt.Errorf("failed to get VAD map for pid: %d", pid)
+	}
+	defer C.VMMDLL_MemFree(C.PVOID(unsafe.Pointer(pVadMap)))
+
+	count := int(C.VadMap_GetCount(pVadMap))
+	result := make([]VadEntry, count)
+	for i := 0; i < count; i++ {
+		e := C.VadMap_GetEntry(pVadMap, C.DWORD(i))
+		entry := VadEntry{
+			VaStart:      uintptr(e.vaStart),
+			VaEnd:        uintptr(e.vaEnd),
+			VadType:      uint32(C.VadEntry_GetVadType(e)),
+			Protection:   uint32(C.VadEntry_GetProtection(e)),
+			IsImage:      C.VadEntry_GetfImage(e) != 0,
+			IsFile:       C.VadEntry_GetfFile(e) != 0,
+			IsPageFile:   C.VadEntry_GetfPageFile(e) != 0,
+			IsPrivate:    C.VadEntry_GetfPrivateMemory(e) != 0,
+			IsTeb:        C.VadEntry_GetfTeb(e) != 0,
+			IsStack:      C.VadEntry_GetfStack(e) != 0,
+			IsHeap:       C.VadEntry_GetfHeap(e) != 0,
+			HeapNum:      uint32(C.VadEntry_GetHeapNum(e)),
+			CommitCharge: uint32(C.VadEntry_GetCommitCharge(e)),
+			MemCommit:    C.VadEntry_GetMemCommit(e) != 0,
+			VaFileObject: uintptr(e.vaFileObject),
+			CVadExPages:  uint32(e.cVadExPages),
+		}
+		if e.uszText != nil {
+			entry.Text = C.GoString(e.uszText)
+		}
+		result[i] = entry
+	}
+	return result, nil
 }
 
 func (h *MemProcFS) GetModuleBase(pid int32, moduleName string) (uintptr, error) {
