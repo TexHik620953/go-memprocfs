@@ -7,6 +7,7 @@ package memprocfs
 import "C"
 import (
 	"fmt"
+	"runtime"
 	"unsafe"
 )
 
@@ -103,11 +104,12 @@ func (h *MemProcFS) GetVadMap(pid int32, identifyModules bool) (*VadList, error)
 			CVadExPages:  uint32(e.cVadExPages),
 		}
 		txt := C.VadEntry_GetText(e)
-		if txt != nil {
+		if txt != nil && *txt != 0 {
 			entry.Text = C.GoString(txt)
 		}
 		result[i] = entry
 	}
+	runtime.KeepAlive(pVadMap)
 	return &VadList{
 		Entries: result,
 	}, nil

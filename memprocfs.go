@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"runtime"
 	"unsafe"
 )
 
@@ -173,6 +174,7 @@ func (h *MemProcFS) MemRead(pid int32, addr uintptr, size int32) ([]byte, error)
 		return nil, fmt.Errorf("failed to MemRead: %d %X", pid, addr)
 	}
 
+	runtime.KeepAlive(pBuff)
 	return buff, nil
 }
 
