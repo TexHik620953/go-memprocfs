@@ -152,17 +152,19 @@ func (h *MemProcFS) MemWrite(pid int32, addr uintptr, data []byte) error {
 }
 
 func (h *MemProcFS) MemRead(pid int32, addr uintptr, size int32) ([]byte, error) {
-
 	if !IsValidAddress(addr) {
 		return nil, fmt.Errorf("failed to read, invalid address: %X", addr)
 	}
+	if size <= 0 {
+		return []byte{}, nil
+	}
 	buff := make([]byte, size, size)
-	sh := (*reflect.SliceHeader)(unsafe.Pointer(&buff))
+	pBuff := unsafe.Pointer(&buff[0])
 	ok := C.VMMDLL_MemReadEx(
 		h.vmDllHandle,
 		C.DWORD(pid),
 		C.ULONG64(addr),
-		C.PBYTE(unsafe.Pointer(sh.Data)),
+		C.PBYTE(pBuff),
 		C.DWORD(size),
 		nil,
 		C.ULONG64(0x0003))
